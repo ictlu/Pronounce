@@ -29,11 +29,8 @@
         >
           <div class="para-num">段落 {{ idx + 1 }}</div>
 
-          <!-- 英文段落 + 朗读 -->
-          <div class="para-en-row">
-            <p class="para-en">{{ para.english }}</p>
-            <SpeakButton :text="para.english" label="朗读" :rate="0.88" />
-          </div>
+          <!-- 英文段落（无朗读按钮） -->
+          <p class="para-en">{{ para.english }}</p>
 
           <!-- 中文翻译 -->
           <div class="para-toggle">
@@ -43,21 +40,19 @@
           </div>
           <p v-if="showZh[para.id]" class="para-zh">{{ para.chinese }}</p>
 
-          <!-- 段落词汇 -->
+          <!-- 段落关键词（不可点击发音，仅展示） -->
           <div v-if="para.vocabulary?.length" class="para-vocab">
-            <span class="vocab-label">段落词汇：</span>
+            <span class="vocab-label">关键词：</span>
             <span
               v-for="word in para.vocabulary"
               :key="word"
               class="vocab-chip"
-              @click="speakWord(word)"
-              title="点击发音"
             >{{ word }}</span>
           </div>
         </div>
       </div>
 
-      <!-- 文章词汇表 -->
+      <!-- 文章词汇表（仅展示，无发音） -->
       <div v-if="article.vocabulary?.length" class="article-vocab-section card">
         <h2 class="section-title">文章词汇表</h2>
         <ul class="article-vocab-list">
@@ -65,7 +60,6 @@
             <div class="av-en-row">
               <span class="av-en">{{ v.english }}</span>
               <span v-if="v.ipa" class="av-ipa">{{ v.ipa }}</span>
-              <SpeakButton :text="v.english" label="" />
             </div>
             <span class="av-zh">{{ v.chinese }}</span>
           </li>
@@ -76,11 +70,9 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { computed, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useContentStore } from '@/store/content.js'
-import SpeakButton from '@/components/SpeakButton.vue'
-import { speak } from '@/services/speech.js'
 
 const props = defineProps({ id: { type: String, required: true } })
 const store = useContentStore()
@@ -94,10 +86,6 @@ const article = computed(() => store.litById[props.id])
 const showZh = reactive({})
 function toggleZh(paraId) {
   showZh[paraId] = !showZh[paraId]
-}
-
-function speakWord(word) {
-  speak(word, 'en-US', 0.85)
 }
 </script>
 
@@ -141,21 +129,13 @@ function speakWord(word) {
   margin-bottom: 1.25rem;
 }
 
-.para-card { }
-
 .para-num {
   font-size: 0.75rem;
   color: var(--color-text-muted);
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
-.para-en-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
 .para-en {
-  flex: 1;
   line-height: 1.8;
   font-size: 0.95rem;
 }
@@ -168,7 +148,6 @@ function speakWord(word) {
   font-size: 0.9rem;
   color: var(--color-text-muted);
   border-left: 3px solid var(--color-primary);
-  padding-left: 0.75rem;
   background: #f0f9ff;
   border-radius: 0 4px 4px 0;
   padding: 0.5rem 0.75rem;
@@ -193,10 +172,7 @@ function speakWord(word) {
   color: #166534;
   border-radius: 4px;
   padding: 0.15rem 0.5rem;
-  cursor: pointer;
-  transition: background 0.15s;
 }
-.vocab-chip:hover { background: #dcfce7; }
 
 .article-vocab-section { }
 .section-title {

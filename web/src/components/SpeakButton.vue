@@ -1,18 +1,18 @@
 <template>
   <button
     class="btn btn-speak"
-    :class="{ speaking: active }"
-    :title="active ? '停止' : '朗读'"
+    :class="{ speaking: isMyTurn }"
+    :title="isMyTurn ? '停止' : '朗读'"
     @click="toggle"
   >
-    <span>{{ active ? '⏹' : '🔊' }}</span>
-    <span>{{ active ? '停止' : label }}</span>
+    <span>{{ isMyTurn ? '⏹' : '🔊' }}</span>
+    <span v-if="label">{{ isMyTurn ? '停止' : label }}</span>
   </button>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { speak, stop, isSpeaking } from '@/services/speech.js'
+import { speak, stop, currentSpeakingText } from '@/services/speech.js'
 
 const props = defineProps({
   text: { type: String, required: true },
@@ -21,11 +21,11 @@ const props = defineProps({
   rate: { type: Number, default: 0.9 }
 })
 
-// 是否是本按钮正在播放（简单判断：全局 isSpeaking 即认为是自己）
-const active = computed(() => isSpeaking.value)
+// 只有当前按钮的 text 正在播放时才高亮
+const isMyTurn = computed(() => currentSpeakingText.value === props.text && props.text !== '')
 
 function toggle() {
-  if (isSpeaking.value) {
+  if (isMyTurn.value) {
     stop()
   } else {
     speak(props.text, props.lang, props.rate)

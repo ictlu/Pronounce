@@ -22,27 +22,27 @@
           :class="{ active: viewMode === tab }"
           @click="viewMode = tab; query = ''"
         >
-          {{ tab === 'directory' ? '📂 目录视图' : '📋 列表视图' }}
+          {{ tab === 'directory' ? '📂 章节目录' : '📋 列表 / 搜索' }}
         </button>
       </div>
 
-      <!-- ===== 目录视图 ===== -->
+      <!-- ===== 章节目录视图 ===== -->
       <template v-if="viewMode === 'directory'">
-        <div class="dir-section" v-for="freq in FREQ_ORDER" :key="freq">
-          <button class="dir-header" @click="toggleSection(freq)">
-            <span class="dir-icon">{{ openSections[freq] ? '▼' : '›' }}</span>
-            <span class="freq-dot" :class="freqClass(freq)"></span>
-            <span class="dir-title">{{ freq }}</span>
-            <span class="dir-count">{{ freqGroups[freq]?.length ?? 0 }} 条</span>
+        <div class="dir-section" v-for="ch in VOCAB_CHAPTERS" :key="ch.title">
+          <button class="dir-header" @click="toggleSection(ch.title)">
+            <span class="dir-icon">{{ openSections[ch.title] ? '▼' : '›' }}</span>
+            <span class="dir-title">{{ ch.title }}</span>
+            <span class="dir-count">{{ chapterGroups[ch.title]?.length ?? 0 }} 条</span>
           </button>
-          <ul v-if="openSections[freq]" class="vocab-list dir-list">
-            <li v-for="item in freqGroups[freq]" :key="item.id">
+          <ul v-if="openSections[ch.title]" class="vocab-list dir-list">
+            <li v-for="item in chapterGroups[ch.title]" :key="item.id">
               <RouterLink :to="`/vocab/${item.id}`" class="vocab-item">
                 <div class="vocab-left">
                   <span class="vocab-en">{{ item.english }}</span>
                   <span v-if="item.ipa" class="vocab-phonetic">{{ item.ipa }}</span>
                 </div>
                 <div class="vocab-zh">{{ item.chinese }}</div>
+                <span class="freq-dot" :class="freqClass(normalizeFreq(item.frequency))"></span>
                 <span class="vocab-arrow">›</span>
               </RouterLink>
             </li>
@@ -50,9 +50,8 @@
         </div>
       </template>
 
-      <!-- ===== 列表视图 ===== -->
+      <!-- ===== 列表 / 搜索视图 ===== -->
       <template v-else>
-        <!-- 搜索框 -->
         <input
           v-model="query"
           class="search-input"
@@ -109,6 +108,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useContentStore } from '@/store/content.js'
 import { normalizeFreq, FREQ_ORDER } from '@/utils/normalize.js'
+import { VOCAB_CHAPTERS, vocabNumber } from '@/utils/chapters.js'
 
 const store = useContentStore()
 onMounted(() => store.loadContent())
@@ -116,13 +116,26 @@ onMounted(() => store.loadContent())
 // 视图模式
 const viewMode = ref('directory')
 
-// 目录视图：折叠状态（默认全展开）
-const openSections = reactive({ '高频必会': true, '中频重点': false, '低频拓展': false, '未标注': false })
-function toggleSection(freq) {
-  openSections[freq] = !openSections[freq]
+// 章节分组
+const chapterGroups = computed(() => {
+  const groups = {}
+  VOCAB_CHAPTERS.forEach(ch => { groups[ch.title] = [] })
+  store.vocabulary.forEach(v => {
+    const n = vocabNumber(v.id)
+    const ch = VOCAB_CHAPTERS.find(c => n >= c.from && n <= c.to)
+    if (ch) groups[ch.title].push(v)
+  })
+  return groups
+})
+
+// 目录折叠状态（默认展开第一章）
+const openSections = reactive({})
+VOCAB_CHAPTERS.forEach((ch, i) => { openSections[ch.title] = i === 0 })
+function toggleSection(title) {
+  openSections[title] = !openSections[title]
 }
 
-// 按频率分组
+// 频率分组（列表视图用）
 const freqGroups = computed(() => {
   const groups = {}
   FREQ_ORDER.forEach(f => { groups[f] = [] })
@@ -216,7 +229,7 @@ const paged = computed(() => {
 .freq-low  { background: #6b7280; }
 .freq-none { background: #d1d5db; }
 
-/* 目录视图 */
+/* 章节目录 */
 .dir-section {
   margin-bottom: 0.5rem;
   border: 1px solid var(--color-border);
@@ -238,22 +251,10 @@ const paged = computed(() => {
 .dir-header:hover { background: var(--color-bg); }
 .dir-icon { font-size: 0.8rem; color: var(--color-text-muted); width: 1em; }
 .dir-title { flex: 1; text-align: left; }
-.dir-count {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-.dir-list {
-  border-top: 1px solid var(--color-border);
-}
-.dir-list .vocab-item {
-  border-radius: 0;
-  border: none;
-  border-bottom: 1px solid var(--color-border);
-}
-.dir-list li:last-child .vocab-item { border-bottom: none; }
+.dir-count { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 400; }
+.dir-list { border-top: 1px solid var(--color-border); }
 
-/* 频率 Tab 过滤 */
+/* 频率 Tab */
 .freq-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -281,12 +282,7 @@ const paged = computed(() => {
 
 /* 词汇列表 */
 .search-input { margin-bottom: 0.75rem; }
-
-.vocab-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-}
+.vocab-list { list-style: none; }
 .vocab-item {
   display: flex;
   align-items: center;
@@ -299,15 +295,18 @@ const paged = computed(() => {
   color: var(--color-text);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+.dir-list .vocab-item {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 0;
+}
+.dir-list li:last-child .vocab-item { border-bottom: none; }
 .vocab-item:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow);
 }
-.vocab-left {
-  display: flex;
-  flex-direction: column;
-  min-width: 130px;
-}
+.vocab-left { display: flex; flex-direction: column; min-width: 130px; }
 .vocab-en { font-weight: 600; font-size: 0.97rem; }
 .vocab-phonetic { font-size: 0.76rem; color: var(--color-text-muted); font-style: italic; }
 .vocab-zh { flex: 1; font-size: 0.88rem; color: var(--color-text-muted); }

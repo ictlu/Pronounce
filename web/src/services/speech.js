@@ -1,14 +1,10 @@
 /**
  * Web Speech API 封装
- * 用法：
- *   import { speak, stop, isSpeaking } from '@/services/speech.js'
- *   speak('endocrine')
  */
 import { ref } from 'vue'
 
-export const isSpeaking = ref(false)
-
-let currentUtterance = null
+/** 当前正在朗读的文本（用于按钮高亮判断） */
+export const currentSpeakingText = ref('')
 
 export function speak(text, lang = 'en-US', rate = 0.9, pitch = 1) {
   if (!('speechSynthesis' in window)) {
@@ -22,11 +18,10 @@ export function speak(text, lang = 'en-US', rate = 0.9, pitch = 1) {
   utterance.rate = rate
   utterance.pitch = pitch
 
-  utterance.onstart = () => { isSpeaking.value = true }
-  utterance.onend = () => { isSpeaking.value = false; currentUtterance = null }
-  utterance.onerror = () => { isSpeaking.value = false; currentUtterance = null }
+  utterance.onstart = () => { currentSpeakingText.value = text }
+  utterance.onend = () => { currentSpeakingText.value = '' }
+  utterance.onerror = () => { currentSpeakingText.value = '' }
 
-  currentUtterance = utterance
   window.speechSynthesis.speak(utterance)
 }
 
@@ -34,6 +29,5 @@ export function stop() {
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel()
   }
-  isSpeaking.value = false
-  currentUtterance = null
+  currentSpeakingText.value = ''
 }

@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <button class="back-btn btn btn-outline" @click="router.back()">‹ 返回</button>
+    <button class="back-btn btn btn-outline" @click="router.push('/vocab')">‹ 词汇列表</button>
 
     <div v-if="store.loading" class="empty-state">
       <div class="icon">⏳</div><p>加载中…</p>

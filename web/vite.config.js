@@ -8,5 +8,8 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
+  },
+  server: {
+    host: true   // 等同于 --host，暴露到局域网，手机可访问
   }
 })

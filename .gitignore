@@ -1,0 +1,5 @@
+﻿node_modules/
+supabase.zip
+supabase-cli/
+test*.mp3
+.agents/

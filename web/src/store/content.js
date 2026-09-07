@@ -12,13 +12,26 @@ export const useContentStore = defineStore('content', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch('/data/medical_english_content.json')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      vocabulary.value = data.vocabulary || []
-      literature.value = data.literature || []
+      const { supabase } = await import('@/services/supabase.js')
+
+      const [vocabRes, litRes] = await Promise.all([
+        supabase.from('core_vocabularies').select('*').order('created_at', { ascending: true }),
+        supabase.from('literature_articles').select('*').order('created_at', { ascending: true })
+      ])
+
+      if (vocabRes.error) throw vocabRes.error
+      if (litRes.error) throw litRes.error
+
+      // 为了兼容现有前端的 id 解析逻辑，将 original_id 映射回 id
+      vocabulary.value = (vocabRes.data || []).map(v => ({ ...v, id: v.original_id || v.id }))
+      literature.value = (litRes.data || []).map(a => ({ 
+        ...a, 
+        id: a.original_id || a.id, 
+        paragraphs: [{ id: `${a.original_id || a.id}-p1`, english: a.content_en, chinese: a.content_zh }] 
+      }))
     } catch (e) {
-      error.value = e.message
+      console.error(e)
+      error.value = e.message || '加载失败'
     } finally {
       loading.value = false
     }
